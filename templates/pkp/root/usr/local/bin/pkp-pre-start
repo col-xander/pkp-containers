@@ -12,6 +12,7 @@ echo "PKP_CONF:        [${PKP_CONF}]"
 echo "PKP_WEB_CONF:    [${PKP_WEB_CONF}]"
 echo "PKP_WEB_CONF:    [${PKP_WEB_CONF}]"
 echo "PKP_CLI_INSTALL: [${PKP_CLI_INSTALL}]"
+echo "PKP_CONFIG_ENV:  [${PKP_CONFIG_ENV}]"
 echo "=================================================="
 
 
@@ -31,6 +32,20 @@ sed -i -e "s/restful_urls = Off/restful_urls = On/g" $PKP_CONF
 
 echo "sed -i -e \"s/enable_cdn = On/enable_cdn = Off/g\" $PKP_CONF"
 sed -i -e "s/enable_cdn = On/enable_cdn = Off/g" $PKP_CONF
+
+# If PKP_CONFIG_ENV is enabled, inject env prefixed with 'OJSCONFIG_' into PKP_CONF
+if [ "${PKP_CONFIG_ENV:-"0"}" = "1" ] ; then
+    # OJS variables set in config.inc.php
+    echo "[PKP Pre-Start] ++ Overriding OJS Config with 'OJSCONFIG_' environment variables."
+    env | grep '^OJSCONFIG_' | while IFS='=' read -r key value; do
+        # Strip "OJSCONFIG_" from the beginning
+        configkey="${key#OJSCONFIG_}"
+        
+        # $configkey is the name (e.g., DB_HOST)
+        # $value is everything after the first '='
+        pkp-variable "$configkey" "$value"
+    done
+fi
 
 # Generate a self-signed cert based on ServerName
 if [ ! -f "$KEY_PATH" ] ||
